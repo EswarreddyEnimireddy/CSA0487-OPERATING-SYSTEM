@@ -1,0 +1,136 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+// Structure to represent a process
+struct process {
+    int pid;
+    int arrival_time;
+    int burst_time;
+    int remaining_time;
+    int turnaround_time;
+    int waiting_time;
+};
+
+// Function to create a new process
+struct process *create_process(int pid, int arrival_time, int burst_time) {
+    struct process *new_process = (struct process *)malloc(sizeof(struct process));
+    new_process->pid = pid;
+    new_process->arrival_time = arrival_time;
+    new_process->burst_time = burst_time;
+    new_process->remaining_time = burst_time;
+    new_process->turnaround_time = 0;
+    new_process->waiting_time = 0;
+    return new_process;
+}
+
+// Function to add a process to the ready queue
+void add_process_to_ready_queue(struct process *process, struct process *ready_queue_head) {
+    struct process *current = ready_queue_head;
+    while (current->next != NULL) {
+        current = current->next;
+    }
+    current->next = process;
+}
+
+// Function to remove a process from the ready queue
+struct process *remove_process_from_ready_queue(struct process *ready_queue_head) {
+    struct process *current = ready_queue_head;
+    if (current->next == NULL) {
+        return NULL;
+    }
+    current->next = current->next->next;
+    return current->next;
+}
+
+// Function to perform round robin scheduling
+void round_robin_scheduling(struct process *processes[], int n, int time_quantum) {
+    struct process *ready_queue_head = NULL;
+    struct process *current = NULL;
+    int i = 0;
+
+    for (int j = 0; j < n; j++) {
+        processes[j].remaining_time = processes[j].burst_time;
+    }
+
+    for (;;) {
+        // Add all processes to the ready queue according to their arrival time
+        for (int j = 0; j < n; j++) {
+            add_process_to_ready_queue(processes[j], ready_queue_head);
+        }
+
+        // Check if the ready queue is empty
+        if (ready_queue_head == NULL) {
+            break;
+        }
+
+        // Select the next process to be executed
+        current = ready_queue_head;
+        for (int j = 1; j < n; j++) {
+            if (current->next == NULL) {
+                break;
+            }
+            current = current->next;
+        }
+
+        // Execute the selected process for the time quantum
+        current->remaining_time -= time_quantum;
+        if (current->remaining_time <= 0) {
+            current->turnaround_time = current->arrival_time - current->burst_time;
+            current->waiting_time = current->turnaround_time - current->burst_time;
+            printf("Process %d completed with turnaround time %d and waiting time %d\n", current->pid, current->turnaround_time, current->waiting_time);
+            remove_process_from_ready_queue(ready_queue_head);
+            i--;
+        } else {
+            printf("Process %d is executing with remaining time %d\n", current->pid, current->remaining_time);
+        }
+    }
+}
+
+int main() {
+    int n;
+    int wt[20], bt[20], at[20], tat[20], ct[20], temp;
+    float atat = 0, awt = 0;
+    printf("Enter the number of processes: ");
+    scanf("%d", &n);
+    printf("Enter the time quantum: ");
+    scanf("%d", &time_quantum);
+
+    struct process *processes[n];
+    for (int i = 0; i < n; i++) {
+        int arrival_time, burst_time;
+        printf("Enter the arrival time and burst time for process %d: ", i + 1);
+        scanf("%d %d", &at[i], &bt[i]);
+    }
+
+    for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+            if (at[i] > at[j]) {
+                temp = at[i];
+                at[i] = at[j];
+                at[j] = temp;
+
+                temp = bt[i];
+                bt[i] = bt[j];
+                bt[j] = temp;
+            }
+        }
+    }
+
+    for (int i = 0; i < n; i++) {
+        ct[i] = at[i] + bt[i];
+        tat[i] = ct[i] - at[i];
+        wt[i] = tat[i] - bt[i];
+        atat += tat[i];
+        awt += wt[i];
+    }
+
+    awt /= n;
+    atat /= n;
+    printf("\nProcess\tArrival Time\tBurst Time\tCompletion Time\tTurnaround Time\tWaiting Time\n");
+    for (int i = 0; i < n; i++) {
+        printf("P[%d]\t%d\t\t%d\t\t%d\t\t%d\t\t%d\n", i + 1, at[i], bt[i], ct[i], tat[i], wt[i]);
+    }
+    printf("\nAverage Waiting Time: %.2f", awt);
+    printf("\nAverage Turnaround Time: %.2f", atat);
+
+    round_robin_scheduling(processes,
